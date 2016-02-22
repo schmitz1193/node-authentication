@@ -2,27 +2,27 @@
 
 const bodyParser = require('body-parser');
 const express = require('express');
+const mongoose = require('mongoose');
 const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 
+const userRoutes = require('./lib/user/routes');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'supersecret';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'secret';
 
 app.set('view engine', 'jade');
 
 app.use(bodyParser.urlencoded({ extended: false }));
-
 app.use(session({
   secret: SESSION_SECRET,
   store: new RedisStore()
 }));
-app.use((req, res, next) => {
-  req.session.visits = req.session.visits || {};
-  req.session.visits[req.url] = req.session.visits[req.url] || 0;
-  req.session.visits[req.url]++
+app.use(userRoutes);
 
-  console.log(req.session);
+app.use((req, res, next) => {
+  app.locals.user = req.session.user || { email: 'Guest' };
   next();
 });
 
@@ -30,30 +30,10 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
+mongoose.connect('mongodb://localhost:27017/nodeauth', (err) => {
+  if (err) throw err;
 
-app.get('/login', (req, res) => {
-  res.render('login');
-});
-
-app.post('/login', (req, res) => {
-  res.redirect('/');
-});
-
-app.get('/register', (req, res) => {
-  res.render('register');
-});
-
-app.post('/register', (req, res) => {
-  if (req.body.password === req.body.verify) {
-    res.redirect('/login');
-  } else {
-    res.render('register', {
-      email: req.body.email,
-      message: 'Passwords do not match'
-    });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`App listening on port ${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`App listening on port ${PORT}`);
+  });
 });
