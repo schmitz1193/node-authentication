@@ -21,6 +21,8 @@ app.use(session({
 }));
 app.use(userRoutes);
 
+app.locals.title = '';
+
 app.use((req, res, next) => {
   app.locals.user = req.session.user || { email: 'Guest' };
   next();
